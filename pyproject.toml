@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqlmodel-export"
+version = "0.1.0"
+description = "Export SQLAlchemy and SQLModel metadata as offline creation DDL"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+dependencies = ["SQLAlchemy>=2.0,<2.1"]
+
+[project.scripts]
+sqlmodel-export = "sqlmodel_export.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+compatibility = ["sqlmodel>=0.0.14"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/core"]
