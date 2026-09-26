@@ -184,7 +184,7 @@ os.replace = fail_replace
 
 
 @pytest.mark.parametrize("operation", ["write", "flush"])
-def test_stdout_failure_has_nonzero_status_and_original_error(run_cli, operation):
+def test_stdout_failure_exits_one_with_original_error(run_cli, operation):
     prelude = f"""
 import io
 import sys
@@ -194,8 +194,36 @@ class FailingOutput(io.StringIO):
 sys.stdout = FailingOutput()
 """
     result = run_cli(["cli_models:metadata", "--dialect", "sqlite"], prelude=prelude)
-    assert result.returncode != 0
+    assert result.returncode == 1
     assert f"OSError: injected stdout {operation} failure" in result.stderr
+
+
+def test_closed_stdout_pipe_exits_one_after_interpreter_shutdown(tmp_path):
+    (tmp_path / "cli_models.py").write_text(MODEL_SOURCE, encoding="utf-8")
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = os.pathsep.join(str(path) for path in sys.path if path)
+    script = r"""
+import sys
+from sqlmodel_export.cli import main
+assert sys.stdin.readline() == "emit\n"
+raise SystemExit(main())
+"""
+    with subprocess.Popen(
+        [sys.executable, "-c", script, "cli_models:metadata", "--dialect", "sqlite"],
+        cwd=tmp_path, env=environment, stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    ) as child:
+        assert child.stdout is not None
+        child.stdout.close()
+        child.stdout = None
+        try:
+            _, diagnostic = child.communicate("emit\n", timeout=20)
+        except subprocess.TimeoutExpired:
+            child.kill()
+            child.communicate()
+            raise
+    assert "BrokenPipeError" in diagnostic
+    assert child.returncode == 1, diagnostic
 
 
 def test_file_write_failure_cleans_temporary_file_and_preserves_destination(run_cli, tmp_path):
