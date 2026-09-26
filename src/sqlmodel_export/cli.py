@@ -41,8 +41,13 @@ def main() -> int:
         metadata = load_metadata(arguments.target)
         sql = export_ddl(metadata, dialect=arguments.dialect)
     if arguments.output is None:
-        sys.stdout.write(sql)
-        sys.stdout.flush()
+        try:
+            sys.stdout.write(sql)
+            sys.stdout.flush()
+        except OSError:
+            # Prevent Python's shutdown flush from replacing exit 1 with exit 120.
+            sys.stdout = None
+            raise
     else:
         write_sql_file(arguments.output, sql)
     return 0
