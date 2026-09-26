@@ -36,3 +36,23 @@ class AppModel(SQLModel):
 """)
     with pytest.raises(ValueError, match="(?i)import"):
         load_metadata(f"{name}:AppModel.metadata")
+
+
+@pytest.mark.parametrize("dialect", ["postgresql", "sqlite", "mysql"])
+def test_sqlmodel_metadata_exports_through_public_api(load_metadata, model_modules, dialect):
+    from sqlmodel_export import export_ddl
+
+    name = model_modules(f"sqlmodel_export_compat_{dialect}.models", """
+from sqlalchemy import MetaData
+from sqlmodel import Field, SQLModel
+class AppModel(SQLModel):
+    metadata = MetaData()
+class Widget(AppModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(max_length=40, index=True)
+""")
+    metadata = load_metadata(f"{name}:AppModel.metadata")
+    sql = export_ddl(metadata, dialect=dialect)
+    assert "CREATE TABLE widget" in sql
+    assert "PRIMARY KEY (id)" in sql
+    assert "CREATE INDEX ix_widget_name ON widget (name)" in sql
