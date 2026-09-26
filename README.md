@@ -119,6 +119,6 @@ SQLMODEL_EXPORT_WHEEL_PYTHON="$PWD/.venv-wheel/bin/python" uv run --locked --gro
 
 Use the corresponding `Scripts/python.exe` path on Windows. Without
 `SQLMODEL_EXPORT_WHEEL_PYTHON`, the installation suite reports skips. Compatibility
-validation covers Python 3.10–3.14, with SQLAlchemy 2.0.0 on Python 3.10 and the
-latest allowed 2.0 release on the other versions. Build artifacts are written to
+validation covers Python 3.14 with the latest allowed SQLAlchemy 2.0 release.
+Build artifacts are written to
 `dist/`; building does not publish them.
