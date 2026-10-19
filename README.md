@@ -122,3 +122,35 @@ Use the corresponding `Scripts/python.exe` path on Windows. Without
 validation covers Python 3.14 with the latest allowed SQLAlchemy 2.0 release.
 Build artifacts are written to
 `dist/`; building does not publish them.
+
+## Release
+
+Create the `pypi` environment in the GitHub repository and register a
+[Trusted Publisher](https://docs.pypi.org/trusted-publishers/adding-a-publisher/)
+for the PyPI project using these values:
+
+| Field | Value |
+| --- | --- |
+| Repository owner | `himkt` |
+| Repository name | `sqlmodel-export` |
+| Workflow filename | `release.yml` |
+| Environment name | `pypi` |
+
+For a new PyPI project, register a
+[pending publisher](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/)
+with the project name `sqlmodel-export` and the same values.
+
+Set `project.version` in `pyproject.toml`, run `uv lock`, and commit the changes.
+Run the development checks, then push the release commit and a matching
+`v<version>` tag to GitHub. For example, for version `0.1.0`:
+
+```sh
+git push origin main
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The [Release workflow](.github/workflows/release.yml) verifies that the tag matches
+`uv version --short`, builds the wheel and source distribution with `uv build`,
+and publishes them to PyPI with `uv publish`. Authentication uses GitHub's OIDC
+identity through Trusted Publishing.
