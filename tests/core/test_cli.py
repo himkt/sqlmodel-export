@@ -109,7 +109,17 @@ event.listen(metadata, "after_create", lambda *args, **kwargs: print("hook diagn
     ("from sqlalchemy import MetaData\nmetadata = MetaData()\n", "ValueError"),
     ('raise RuntimeError("model initialization failed")\n', "RuntimeError"),
     (MODEL_SOURCE + '\ndef fail(*args, **kwargs):\n    raise RuntimeError("late hook failure")\nevent.listen(metadata, "after_create", fail)\n', "RuntimeError"),
-    (MODEL_SOURCE + '\nfrom sqlalchemy.dialects.postgresql import JSONB\nTable("zzz_unsupported", metadata, Column("payload", JSONB))\n', "CompileError"),
+    (MODEL_SOURCE + '''
+from sqlalchemy.exc import CompileError
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.types import UserDefinedType
+class FailingType(UserDefinedType):
+    pass
+@compiles(FailingType)
+def compile_failure(element: FailingType, compiler: object, **kwargs: object) -> str:
+    raise CompileError("injected type compilation failure")
+Table("zzz_unsupported", metadata, Column("payload", FailingType()))
+''', "CompileError"),
 ])
 @pytest.mark.parametrize("file_output", [False, True])
 def test_generation_failure_emits_no_sql_and_preserves_destination(run_cli, tmp_path, source, exception, file_output):
