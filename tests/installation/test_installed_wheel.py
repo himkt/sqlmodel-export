@@ -104,8 +104,15 @@ def test_installed_console_exports_offline_to_stdout_and_file(installed_cli, tmp
 @pytest.mark.parametrize("file_output", [False, True])
 def test_installed_console_buffers_sql_until_late_compilation_succeeds(installed_cli, tmp_path, file_output):
     source = MODEL_SOURCE + """
-from sqlalchemy.dialects.postgresql import JSONB
-Table("zzz_invalid", metadata, Column("payload", JSONB))
+from sqlalchemy.exc import CompileError
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.types import UserDefinedType
+class FailingType(UserDefinedType):
+    pass
+@compiles(FailingType)
+def compile_failure(element: FailingType, compiler: object, **kwargs: object) -> str:
+    raise CompileError("injected type compilation failure")
+Table("zzz_invalid", metadata, Column("payload", FailingType()))
 """
     destination = tmp_path / "schema.sql"
     destination.write_bytes(b"existing schema\n")
@@ -118,6 +125,7 @@ Table("zzz_invalid", metadata, Column("payload", JSONB))
     assert "import diagnostic" in result.stderr
     assert "Traceback" in result.stderr
     assert "CompileError" in result.stderr
+    assert "injected type compilation failure" in result.stderr
     assert "zzz_invalid" in result.stderr
     assert destination.read_bytes() == b"existing schema\n"
 
