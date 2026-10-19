@@ -1,4 +1,5 @@
 import sqlite3
+from collections.abc import Callable
 
 import pytest
 from sqlalchemy import (
@@ -6,9 +7,12 @@ from sqlalchemy import (
     String, Table, UniqueConstraint, event, text,
 )
 from sqlalchemy.dialects.postgresql import ENUM, JSONB
+from sqlalchemy.dialects import mysql, sqlite
+from sqlalchemy.engine import Dialect
 from sqlalchemy.exc import CompileError, NoReferencedTableError
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.schema import DDLElement
+from sqlalchemy.schema import CreateTable, DDLElement
+from sqlalchemy.types import UserDefinedType
 
 
 @pytest.fixture
@@ -174,11 +178,33 @@ def test_unresolved_foreign_key_propagates(export_ddl):
         export_ddl(metadata, dialect="sqlite")
 
 
-@pytest.mark.parametrize("dialect", ["sqlite", "mysql"])
-def test_unsupported_vendor_type_propagates_compilation_failure(export_ddl, dialect):
+@pytest.mark.parametrize("dialect, dialect_factory", [("sqlite", sqlite.dialect), ("mysql", mysql.dialect)])
+def test_vendor_type_follows_native_dialect_compilation(
+    export_ddl: Callable[..., str], dialect: str, dialect_factory: Callable[[], Dialect],
+) -> None:
     metadata = MetaData()
-    Table("widget", metadata, Column("payload", JSONB))
-    with pytest.raises(CompileError):
+    table = Table("widget", metadata, Column("payload", JSONB))
+    try:
+        expected = str(CreateTable(table).compile(dialect=dialect_factory())).strip()
+    except CompileError:
+        with pytest.raises(CompileError, match="JSONB"):
+            export_ddl(metadata, dialect=dialect)
+    else:
+        assert expected + ";\n" == export_ddl(metadata, dialect=dialect)
+
+
+@pytest.mark.parametrize("dialect", ["postgresql", "sqlite", "mysql"])
+def test_type_compilation_failure_propagates(export_ddl: Callable[..., str], dialect: str) -> None:
+    class FailingType(UserDefinedType):
+        pass
+
+    @compiles(FailingType)
+    def compile_failure(element: FailingType, compiler: object, **kwargs: object) -> str:
+        raise CompileError("injected type compilation failure")
+
+    metadata = simple_metadata()
+    Table("zzz_unsupported", metadata, Column("payload", FailingType()))
+    with pytest.raises(CompileError, match="injected type compilation failure"):
         export_ddl(metadata, dialect=dialect)
 
 

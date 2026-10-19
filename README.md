@@ -1,7 +1,7 @@
 # sqlmodel-export
 
 Export SQLAlchemy or SQLModel metadata as creation SQL for PostgreSQL, SQLite,
-or MySQL. Requires Python 3.10+ and SQLAlchemy 2.0; generation works offline
+or MySQL. Requires Python 3.10+ and SQLAlchemy 2.0 or 2.1; generation works offline
 without database credentials, database drivers, or Alembic.
 
 ## Install and run
@@ -119,7 +119,7 @@ SQLMODEL_EXPORT_WHEEL_PYTHON="$PWD/.venv-wheel/bin/python" uv run --locked --gro
 
 Use the corresponding `Scripts/python.exe` path on Windows. Without
 `SQLMODEL_EXPORT_WHEEL_PYTHON`, the installation suite reports skips. Compatibility
-validation covers Python 3.14 with the latest allowed SQLAlchemy 2.0 release.
+validation covers Python 3.14 with SQLAlchemy 2.0.54 and 2.1.4.
 Build artifacts are written to
 `dist/`; building does not publish them.
 
