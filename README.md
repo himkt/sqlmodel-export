@@ -108,6 +108,10 @@ The default suite runs core tests. `uv sync --locked` creates a core environment
 without SQLModel; the separate `compatibility` dependency group adds SQLModel.
 Run all suites with `uv run --locked --group compatibility pytest tests`.
 
+The [CI workflow](.github/workflows/ci.yml) runs the core and SQLModel compatibility
+suites on pushes to `main` and pull requests, using the Python and uv versions
+configured in the workflow.
+
 Installed-wheel tests use an isolated environment containing the wheel and its
 runtime dependencies only:
 
